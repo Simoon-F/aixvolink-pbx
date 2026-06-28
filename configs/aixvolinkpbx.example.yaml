@@ -1,0 +1,18 @@
+# Phase 0 configuration contract. Production parsing begins in Phase 1.
+node:
+  id: "pbx-development-1"
+
+sip:
+  udpListen: "127.0.0.1:5060"
+  tcpListen: "127.0.0.1:5060"
+
+media:
+  bindIP: "127.0.0.1"
+  rtpPortStart: 10000
+  rtpPortEnd: 20000
+
+webrtc:
+  httpListen: "127.0.0.1:8080"
+  iceServers: []
+
+shutdownTimeout: "10s"

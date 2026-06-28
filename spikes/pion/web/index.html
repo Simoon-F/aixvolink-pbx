@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AixvoLinkPBX Pion audio spike</title>
+  <style>
+    body { max-width: 42rem; margin: 4rem auto; padding: 0 1rem; font: 16px/1.5 system-ui, sans-serif; color: #172033; }
+    button { padding: .7rem 1rem; font: inherit; cursor: pointer; }
+    code { background: #eef1f6; padding: .15rem .3rem; }
+  </style>
+</head>
+<body>
+  <h1>Pion browser audio spike</h1>
+  <p>This page sends microphone audio to a loopback Pion PeerConnection and plays the echoed Opus track. Use headphones to avoid acoustic feedback.</p>
+  <button id="connect-microphone">Connect microphone</button>
+  <button id="connect-tone">Connect test tone</button>
+  <p id="status">Idle</p>
+  <audio id="remote" autoplay controls></audio>
+  <script>
+    const microphoneButton = document.querySelector('#connect-microphone');
+    const toneButton = document.querySelector('#connect-tone');
+    const status = document.querySelector('#status');
+    const remote = document.querySelector('#remote');
+    let peer;
+
+    async function connect(stream) {
+      microphoneButton.disabled = true;
+      toneButton.disabled = true;
+      try {
+        peer = new RTCPeerConnection({ iceServers: [] });
+        stream.getAudioTracks().forEach(track => peer.addTrack(track, stream));
+        peer.ontrack = event => { remote.srcObject = event.streams[0]; };
+        peer.onconnectionstatechange = () => { status.textContent = peer.connectionState; };
+
+        await peer.setLocalDescription(await peer.createOffer());
+        await new Promise(resolve => {
+          if (peer.iceGatheringState === 'complete') return resolve();
+          peer.addEventListener('icegatheringstatechange', () => {
+            if (peer.iceGatheringState === 'complete') resolve();
+          });
+        });
+        const response = await fetch('/offer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(peer.localDescription)
+        });
+        if (!response.ok) throw new Error(`offer failed: ${response.status}`);
+        await peer.setRemoteDescription(await response.json());
+      } catch (error) {
+        status.textContent = error.message;
+        microphoneButton.disabled = false;
+        toneButton.disabled = false;
+      }
+    }
+
+    microphoneButton.addEventListener('click', async () => {
+      try {
+        await connect(await navigator.mediaDevices.getUserMedia({ audio: true, video: false }));
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    });
+
+    toneButton.addEventListener('click', async () => {
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator();
+      const destination = audioContext.createMediaStreamDestination();
+      oscillator.frequency.value = 440;
+      oscillator.connect(destination);
+      oscillator.start();
+      await connect(destination.stream);
+    });
+
+    window.addEventListener('beforeunload', () => peer?.close());
+  </script>
+</body>
+</html>
