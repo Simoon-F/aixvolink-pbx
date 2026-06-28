@@ -34,7 +34,7 @@ The Phase 0 audit findings are closed: CI now runs on both `main` and `master` a
 | `make test-race` | Pass for all packages, including network integration tests |
 | `AIXVOLINKPBX_TEST_MYSQL_DSN=... make integration-test` against Docker MySQL 8.4 | Pass; migration, credential, registration, CDR, and event assertions passed |
 | `make sipp-test` with SIPp 3.7.7 | Pass; Digest registration, answer/BYE, 486/ACK, and CANCEL/487/ACK |
-| `make fuzz-smoke` | Pass; 5 seconds, 2,283,352 executions, no panic |
+| `make fuzz-smoke` | Pass; deterministic 100,000-execution smoke budget, no panic |
 | `GOVULNCHECK=... make vulncheck` (v1.5.0) | Pass, `No vulnerabilities found` |
 | `GO_LICENSES=... make license-check` (v1.6.0) | Pass; allowed Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, MPL-2.0 |
 | `make build` | Pass, pure-Go linux/amd64 and linux/arm64 binaries |

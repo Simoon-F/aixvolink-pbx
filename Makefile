@@ -34,7 +34,7 @@ sipp-test:
 	./scripts/run_sipp_tests.sh
 
 fuzz-smoke:
-	$(GO) test -run='^$$' -fuzz=FuzzSIPRegisterParser -fuzztime=5s ./internal/sip/registrar
+	$(GO) test -run='^$$' -fuzz=FuzzSIPRegisterParser -fuzztime=100000x -timeout=2m ./internal/sip/registrar
 
 bench:
 	$(GO) test -run='^$$' -bench=. -benchmem ./internal/core/... ./spikes/diago/...
