@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,7 +21,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const version = "0.1.0-phase1"
+const version = "0.2.0-phase2"
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -39,12 +40,27 @@ func run(ctx context.Context, arguments []string) (runErr error) {
 	realm := flags.String("realm", "pbx.example.invalid", "SIP authentication realm")
 	tenantID := flags.String("tenant-id", "default", "single-node tenant ID")
 	nodeID := flags.String("node-id", "pbx-development-1", "PBX node ID")
+	mediaBind := flags.String("media-bind", "127.0.0.1", "RTP/RTCP bind IP")
+	mediaAdvertised := flags.String("media-advertised", "127.0.0.1", "RTP/RTCP advertised IP")
+	rtpStart := flags.Uint("rtp-start", 10000, "first even RTP port")
+	rtpEnd := flags.Uint("rtp-end", 19999, "last odd RTCP port")
 	if err := flags.Parse(arguments); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
 	}
 	if *showVersion {
 		fmt.Println(version)
 		return nil
+	}
+	mediaBindIP, err := netip.ParseAddr(*mediaBind)
+	if err != nil {
+		return fmt.Errorf("parse media bind IP: %w", err)
+	}
+	mediaAdvertisedIP, err := netip.ParseAddr(*mediaAdvertised)
+	if err != nil {
+		return fmt.Errorf("parse media advertised IP: %w", err)
+	}
+	if *rtpStart > 65535 || *rtpEnd > 65535 {
+		return fmt.Errorf("media port range exceeds 65535")
 	}
 	dsn := os.Getenv("AIXVOLINKPBX_MYSQL_DSN")
 	if dsn == "" {
@@ -66,6 +82,10 @@ func run(ctx context.Context, arguments []string) (runErr error) {
 	if err != nil {
 		return err
 	}
+	mediaBus, err := event.NewMediaBus(1024)
+	if err != nil {
+		return err
+	}
 	application, err := app.New(app.Config{
 		BindHost: *bindHost, SIPPort: *sipPort, Realm: *realm,
 		TenantID: registration.TenantID(*tenantID), NodeID: call.NodeID(*nodeID),
@@ -74,13 +94,18 @@ func run(ctx context.Context, arguments []string) (runErr error) {
 		MaxRegisterExpiry: time.Hour, RegisterCleanup: 30 * time.Second,
 		TransactionTimeout: 5 * time.Second, InviteTimeout: 30 * time.Second,
 		DispatchTimeout: 5 * time.Second, MaxActiveCalls: 1000, CallMailboxSize: 64,
-	}, store, store, callBus, slog.Default())
+		MediaBindIP: mediaBindIP, MediaAdvertisedIP: mediaAdvertisedIP,
+		RTPStartPort: uint16(*rtpStart), RTPEndPort: uint16(*rtpEnd), RTPReadPoll: 250 * time.Millisecond,
+		MediaInactivity: 10 * time.Second, RTCPInterval: 5 * time.Second,
+		MediaSummaryInterval: 5 * time.Second, MediaSummaryTimeout: 100 * time.Millisecond,
+	}, store, store, callBus, mediaBus, slog.Default())
 	if err != nil {
 		return err
 	}
 
 	group, groupCtx := errgroup.WithContext(ctx)
 	group.Go(func() error { return callBus.Run(groupCtx, store) })
+	group.Go(func() error { return mediaBus.Run(groupCtx, store) })
 	group.Go(func() error { return application.Run(groupCtx) })
 	if err := group.Wait(); err != nil {
 		return fmt.Errorf("run service: %w", err)

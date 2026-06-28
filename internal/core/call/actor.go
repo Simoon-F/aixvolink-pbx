@@ -185,11 +185,15 @@ func allowedTransition(from, to State) bool {
 	case StateNew:
 		return to == StateRouting || to == StateFailed || to == StateTerminating
 	case StateRouting:
-		return to == StateRinging || to == StateAnswered || to == StateFailed || to == StateTerminating
+		return to == StateRinging || to == StateEarlyMedia || to == StateAnswered || to == StateFailed || to == StateTerminating
 	case StateRinging:
+		return to == StateEarlyMedia || to == StateAnswered || to == StateFailed || to == StateTerminating
+	case StateEarlyMedia:
 		return to == StateAnswered || to == StateFailed || to == StateTerminating
 	case StateAnswered:
-		return to == StateTerminating
+		return to == StateHeld || to == StateTerminating
+	case StateHeld:
+		return to == StateAnswered || to == StateTerminating
 	case StateTerminating:
 		return to == StateTerminated || to == StateFailed
 	case StateTerminated, StateFailed:

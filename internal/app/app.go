@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/Simoon-F/aixvolink-pbx/internal/core/call"
 	"github.com/Simoon-F/aixvolink-pbx/internal/core/registration"
+	"github.com/Simoon-F/aixvolink-pbx/internal/media/portalloc"
+	mediasession "github.com/Simoon-F/aixvolink-pbx/internal/media/session"
 	"github.com/Simoon-F/aixvolink-pbx/internal/sip/auth"
 	"github.com/Simoon-F/aixvolink-pbx/internal/sip/b2bua"
 	"github.com/Simoon-F/aixvolink-pbx/internal/sip/registrar"
@@ -39,6 +42,15 @@ type Config struct {
 	DispatchTimeout       time.Duration
 	MaxActiveCalls        int
 	CallMailboxSize       int
+	MediaBindIP           netip.Addr
+	MediaAdvertisedIP     netip.Addr
+	RTPStartPort          uint16
+	RTPEndPort            uint16
+	RTPReadPoll           time.Duration
+	MediaInactivity       time.Duration
+	RTCPInterval          time.Duration
+	MediaSummaryInterval  time.Duration
+	MediaSummaryTimeout   time.Duration
 }
 
 // App owns one sipgo user agent and its UDP/TCP listeners.
@@ -61,6 +73,7 @@ func New(
 	credentialStore auth.CredentialStore,
 	registrationStore registration.Store,
 	publisher call.Publisher,
+	mediaPublisher mediasession.Publisher,
 	logger *slog.Logger,
 ) (*App, error) {
 	if err := validateConfig(cfg); err != nil {
@@ -100,12 +113,26 @@ func New(
 		_ = ua.Close()
 		return nil, fmt.Errorf("create SIP client: %w", err)
 	}
+	mediaPool, err := portalloc.New(portalloc.Config{BindIP: cfg.MediaBindIP, StartPort: cfg.RTPStartPort, EndPort: cfg.RTPEndPort})
+	if err != nil {
+		_ = ua.Close()
+		return nil, err
+	}
+	mediaFactory, err := mediasession.NewFactory(mediasession.Config{
+		AdvertisedIP: cfg.MediaAdvertisedIP, ReadPollInterval: cfg.RTPReadPoll,
+		InactivityTimeout: cfg.MediaInactivity, RTCPInterval: cfg.RTCPInterval,
+		SummaryInterval: cfg.MediaSummaryInterval, SummaryTimeout: cfg.MediaSummaryTimeout,
+	}, mediaPool, mediaPublisher)
+	if err != nil {
+		_ = ua.Close()
+		return nil, err
+	}
 	contact := sip.ContactHeader{Address: sip.Uri{Scheme: "sip", User: "pbx", Host: cfg.BindHost, Port: cfg.SIPPort}}
 	callEngine, err := b2bua.NewEngine(b2bua.Config{
 		TenantID: cfg.TenantID, Realm: cfg.Realm, NodeID: cfg.NodeID,
 		MaxActiveCalls: cfg.MaxActiveCalls, MailboxSize: cfg.CallMailboxSize,
 		InviteTimeout: cfg.InviteTimeout, DispatchTimeout: cfg.DispatchTimeout,
-	}, manager, publisher, call.SystemClock{}, client, contact, logger)
+	}, manager, publisher, call.SystemClock{}, client, contact, mediaFactory, logger)
 	if err != nil {
 		_ = ua.Close()
 		return nil, err
@@ -206,6 +233,9 @@ func validateConfig(cfg Config) error {
 	}
 	if cfg.RegisterCleanup <= 0 {
 		return fmt.Errorf("registration cleanup interval must be positive")
+	}
+	if !cfg.MediaBindIP.IsValid() || !cfg.MediaAdvertisedIP.IsValid() {
+		return fmt.Errorf("media bind and advertised IPs are required")
 	}
 	return nil
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/Simoon-F/aixvolink-pbx/internal/core/call"
 	"github.com/Simoon-F/aixvolink-pbx/internal/core/registration"
+	mediasession "github.com/Simoon-F/aixvolink-pbx/internal/media/session"
 	sipauth "github.com/Simoon-F/aixvolink-pbx/internal/sip/auth"
 	mysqldriver "github.com/go-sql-driver/mysql"
 )
@@ -243,6 +244,30 @@ INSERT INTO call_events (
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit call event transaction: %w", err)
+	}
+	return nil
+}
+
+// WriteMediaSummary persists one periodic or final quality sample.
+func (s *Store) WriteMediaSummary(ctx context.Context, summary mediasession.Summary) error {
+	_, err := s.db.ExecContext(ctx, `
+INSERT INTO media_quality_samples (
+    tenant_id, call_id, media_session_id, node_id, caller_leg_id, callee_leg_id, sampled_at,
+    caller_packets, caller_bytes, caller_lost, caller_reordered, caller_duplicates,
+    caller_jitter_samples, caller_rtt_microseconds, caller_timed_out,
+    callee_packets, callee_bytes, callee_lost, callee_reordered, callee_duplicates,
+    callee_jitter_samples, callee_rtt_microseconds, callee_timed_out, one_way, dropped_summaries
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		summary.TenantID, summary.CallID, summary.MediaSessionID, summary.NodeID, summary.CallerLegID, summary.CalleeLegID, summary.SampledAt,
+		summary.Caller.Inbound.Packets, summary.Caller.Inbound.Bytes, summary.Caller.Inbound.Lost,
+		summary.Caller.Inbound.Reordered, summary.Caller.Inbound.Duplicates, summary.Caller.Inbound.JitterSamples,
+		summary.Caller.RTT.Microseconds(), summary.Caller.TimedOut,
+		summary.Callee.Inbound.Packets, summary.Callee.Inbound.Bytes, summary.Callee.Inbound.Lost,
+		summary.Callee.Inbound.Reordered, summary.Callee.Inbound.Duplicates, summary.Callee.Inbound.JitterSamples,
+		summary.Callee.RTT.Microseconds(), summary.Callee.TimedOut, summary.OneWay, summary.DroppedSummaries,
+	)
+	if err != nil {
+		return fmt.Errorf("insert media quality sample: %w", err)
 	}
 	return nil
 }

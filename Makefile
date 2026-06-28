@@ -4,7 +4,7 @@ GOLANGCI_LINT ?= golangci-lint
 GOVULNCHECK ?= govulncheck
 GO_LICENSES ?= go-licenses
 
-.PHONY: all fmt fmt-check vet lint test test-race integration-test sipp-test fuzz-smoke bench vulncheck license-check build build-linux-amd64 build-linux-arm64 tools clean
+.PHONY: all fmt fmt-check vet lint test test-race integration-test sipp-test fuzz-smoke media-bench bench vulncheck license-check build build-linux-amd64 build-linux-arm64 tools clean
 
 all: fmt-check vet lint test test-race vulncheck license-check build
 
@@ -35,9 +35,14 @@ sipp-test:
 
 fuzz-smoke:
 	$(GO) test -run='^$$' -fuzz=FuzzSIPRegisterParser -fuzztime=100000x -timeout=2m ./internal/sip/registrar
+	$(GO) test -run='^$$' -fuzz=FuzzParseAudio -fuzztime=100000x -timeout=2m ./internal/sip/sdp
+
+media-bench:
+	$(GO) test -count=1 -v -run=TestHundredConcurrentG711AnchoredSessions -timeout=2m ./internal/media/session
+	$(GO) test -run='^$$' -bench=. -benchmem ./internal/media/...
 
 bench:
-	$(GO) test -run='^$$' -bench=. -benchmem ./internal/core/... ./spikes/diago/...
+	$(GO) test -run='^$$' -bench=. -benchmem ./internal/core/... ./internal/media/... ./spikes/diago/...
 
 vulncheck:
 	$(GOVULNCHECK) ./...

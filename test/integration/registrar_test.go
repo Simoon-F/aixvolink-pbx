@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/netip"
 	"strconv"
 	"sync"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/Simoon-F/aixvolink-pbx/internal/app"
 	"github.com/Simoon-F/aixvolink-pbx/internal/core/call"
 	"github.com/Simoon-F/aixvolink-pbx/internal/core/registration"
+	mediasession "github.com/Simoon-F/aixvolink-pbx/internal/media/session"
 	"github.com/Simoon-F/aixvolink-pbx/internal/platform/memory"
 	sipauth "github.com/Simoon-F/aixvolink-pbx/internal/sip/auth"
 	"github.com/emiago/sipgo"
@@ -110,7 +112,11 @@ func startTestApp(t *testing.T, credentials []sipauth.Credential) *runningApp {
 		MaxRegisterExpiry: time.Hour, RegisterCleanup: 50 * time.Millisecond,
 		TransactionTimeout: 3 * time.Second, InviteTimeout: 3 * time.Second,
 		DispatchTimeout: 3 * time.Second, MaxActiveCalls: 16, CallMailboxSize: 64,
-	}, memory.NewCredentialStore(credentials), registrationStore, recorder, slog.New(slog.NewTextHandler(io.Discard, nil)))
+		MediaBindIP: netip.MustParseAddr("127.0.0.1"), MediaAdvertisedIP: netip.MustParseAddr("127.0.0.1"),
+		RTPStartPort: 26000, RTPEndPort: 26063, RTPReadPoll: 20 * time.Millisecond,
+		MediaInactivity: 500 * time.Millisecond, RTCPInterval: 100 * time.Millisecond,
+		MediaSummaryInterval: 100 * time.Millisecond, MediaSummaryTimeout: 20 * time.Millisecond,
+	}, memory.NewCredentialStore(credentials), registrationStore, recorder, mediasession.DiscardPublisher{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatalf("app.New() error = %v", err)
 	}

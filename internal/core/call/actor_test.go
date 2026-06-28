@@ -61,7 +61,10 @@ func TestActorSerializesCallLifecycleWithCorrelatedEvents(t *testing.T) {
 	transitions := []call.Transition{
 		{State: call.StateRouting, LegID: current.CallerLeg, ProtocolEvent: "INVITE"},
 		{State: call.StateRinging, LegID: current.CalleeLeg, ProtocolEvent: "180"},
+		{State: call.StateEarlyMedia, LegID: current.CalleeLeg, ProtocolEvent: "183"},
 		{State: call.StateAnswered, LegID: current.CalleeLeg, ProtocolEvent: "200"},
+		{State: call.StateHeld, LegID: current.CallerLeg, ProtocolEvent: "re-INVITE"},
+		{State: call.StateAnswered, LegID: current.CallerLeg, ProtocolEvent: "re-INVITE"},
 		{State: call.StateTerminating, LegID: current.CallerLeg, ProtocolEvent: "BYE"},
 		{State: call.StateTerminated, LegID: current.CallerLeg, ProtocolEvent: "200", Reason: "normal clearing"},
 	}
@@ -80,8 +83,8 @@ func TestActorSerializesCallLifecycleWithCorrelatedEvents(t *testing.T) {
 	}
 	recorder.mu.Lock()
 	defer recorder.mu.Unlock()
-	if len(recorder.events) != 6 {
-		t.Fatalf("event count = %d, want 6", len(recorder.events))
+	if len(recorder.events) != 9 {
+		t.Fatalf("event count = %d, want 9", len(recorder.events))
 	}
 	for _, event := range recorder.events {
 		if event.CallID != current.ID || event.NodeID != current.NodeID || event.TenantID != current.TenantID {

@@ -5,12 +5,15 @@ import (
 	"database/sql"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Simoon-F/aixvolink-pbx/internal/core/call"
 	"github.com/Simoon-F/aixvolink-pbx/internal/core/registration"
+	mediartp "github.com/Simoon-F/aixvolink-pbx/internal/media/rtp"
+	mediasession "github.com/Simoon-F/aixvolink-pbx/internal/media/session"
 	mysqlstore "github.com/Simoon-F/aixvolink-pbx/internal/platform/mysql"
 	sipauth "github.com/Simoon-F/aixvolink-pbx/internal/sip/auth"
 )
@@ -41,21 +44,27 @@ func TestStorePersistsRegistrarAndCallEvidence(t *testing.T) {
 			t.Errorf("database Close() error = %v", err)
 		}
 	})
-	for _, table := range []string{"call_events", "calls", "registrations", "sip_credentials"} {
+	for _, table := range []string{"media_quality_samples", "call_events", "calls", "registrations", "sip_credentials"} {
 		if _, err := db.ExecContext(ctx, "DROP TABLE IF EXISTS "+table); err != nil {
 			t.Fatalf("drop %s: %v", table, err)
 		}
 	}
-	migration, err := os.ReadFile("../../../migrations/000001_phase1.sql")
+	migrations, err := filepath.Glob("../../../migrations/*.sql")
 	if err != nil {
-		t.Fatalf("read migration: %v", err)
+		t.Fatalf("list migrations: %v", err)
 	}
-	for _, statement := range strings.Split(string(migration), ";") {
-		if strings.TrimSpace(statement) == "" {
-			continue
+	for _, migrationPath := range migrations {
+		migration, err := os.ReadFile(migrationPath)
+		if err != nil {
+			t.Fatalf("read migration: %v", err)
 		}
-		if _, err := db.ExecContext(ctx, statement); err != nil {
-			t.Fatalf("apply migration: %v", err)
+		for _, statement := range strings.Split(string(migration), ";") {
+			if strings.TrimSpace(statement) == "" {
+				continue
+			}
+			if _, err := db.ExecContext(ctx, statement); err != nil {
+				t.Fatalf("apply migration %s: %v", migrationPath, err)
+			}
 		}
 	}
 
@@ -113,5 +122,21 @@ VALUES ('tenant-1', '1001', 'example.invalid', ?, 2)`, ha1); err != nil {
 	}
 	if state != string(call.StateFailed) || eventCount != 2 {
 		t.Fatalf("state = %q, event count = %d", state, eventCount)
+	}
+	summary := mediasession.Summary{
+		MediaSessionID: "01900000-0000-7000-8000-000000000004", TenantID: "tenant-1",
+		CallID: string(events[0].CallID), NodeID: "node-1", CallerLegID: string(events[0].CallerLeg), CalleeLegID: string(events[0].CalleeLeg),
+		SampledAt: now, Caller: mediasession.LegSummary{Inbound: mediartp.Stats{Packets: 10, Bytes: 1600, Lost: 1}},
+		Callee: mediasession.LegSummary{Inbound: mediartp.Stats{Packets: 11, Bytes: 1760}}, OneWay: false,
+	}
+	if err := store.WriteMediaSummary(ctx, summary); err != nil {
+		t.Fatalf("WriteMediaSummary() error = %v", err)
+	}
+	var mediaSampleCount int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_quality_samples WHERE call_id = ?`, events[0].CallID).Scan(&mediaSampleCount); err != nil {
+		t.Fatalf("query media samples: %v", err)
+	}
+	if mediaSampleCount != 1 {
+		t.Fatalf("media sample count = %d", mediaSampleCount)
 	}
 }

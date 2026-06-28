@@ -55,18 +55,29 @@ run_pair() {
   callee_scenario=$2
   caller_port=$3
   callee_port=$4
+  caller_media_port=$((caller_port + 12000))
+  callee_media_port=$((callee_port + 12000))
 
   register_user "$callee_port" 1002
-  "$SIPP" "$TARGET" -sf "$ROOT/test/sipp/$callee_scenario" -i 127.0.0.1 -p "$callee_port" -m 1 -nd -timeout 10s >/dev/null &
+  "$SIPP" "$TARGET" -sf "$ROOT/test/sipp/$callee_scenario" -i 127.0.0.1 -p "$callee_port" \
+    -mi 127.0.0.1 -mp "$callee_media_port" -rtp_echo -m 1 -nd -timeout 10s >/dev/null &
   callee_pid=$!
   sleep 1
   register_user "$caller_port" 1001
-  "$SIPP" "$TARGET" -sf "$ROOT/test/sipp/$caller_scenario" -i 127.0.0.1 -p "$caller_port" -m 1 -nd -timeout 10s >/dev/null
+  "$SIPP" "$TARGET" -sf "$ROOT/test/sipp/$caller_scenario" -i 127.0.0.1 -p "$caller_port" \
+    -mi 127.0.0.1 -mp "$caller_media_port" -m 1 -nd -timeout 10s >/dev/null
   wait "$callee_pid"
 }
 
 run_pair caller-answer.xml callee-answer.xml 16101 16102
 run_pair caller-reject.xml callee-reject.xml 16201 16202
 run_pair caller-cancel.xml callee-cancel.xml 16301 16302
+run_pair caller-early-media.xml callee-early-media.xml 16501 16502
 
-echo "SIPp Phase 1 protocol scenarios passed"
+if ! grep -Eq 'media_evidence caller_inbound=[1-9][0-9]* callee_inbound=[1-9][0-9]*' "$SERVER_LOG"; then
+  echo "SIPp RTP media did not traverse both anchored legs" >&2
+  cat "$SERVER_LOG" >&2
+  exit 1
+fi
+
+echo "SIPp Phase 1/2 signaling, early-media, and anchored RTP scenarios passed"

@@ -5,9 +5,10 @@ The executable SIPp suite in `test/sipp` validates the Phase 1 UDP call-control 
 Covered flows:
 
 - REGISTER challenge, Digest authentication, and 200 response for extensions 1001 and 1002.
-- INVITE, 100, 180, 200, ACK, caller BYE, and final 200.
+- INVITE with G.711 SDP, 100, 180, anchored-media 200, ACK, caller BYE, and final 200.
 - INVITE rejection with 486 and non-2xx ACK.
 - INVITE, ringing, matching CANCEL, 200 to CANCEL, 487 to INVITE, and ACK.
+- INVITE, SDP-bearing 183 early media, final 200, ACK, and BYE.
 
 Run with:
 

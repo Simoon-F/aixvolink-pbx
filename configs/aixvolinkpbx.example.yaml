@@ -1,4 +1,4 @@
-# Phase 1 configuration example. The current binary accepts equivalent flags and environment variables.
+# Phase 2 configuration example. The current binary accepts equivalent flags and environment variables.
 node:
   id: "pbx-development-1"
 
@@ -17,8 +17,11 @@ secrets:
 
 media:
   bindIP: "127.0.0.1"
+  advertisedIP: "127.0.0.1"
   rtpPortStart: 10000
-  rtpPortEnd: 20000
+  rtpPortEnd: 19999
+  inactivityTimeout: "10s"
+  rtcpInterval: "5s"
 
 webrtc:
   httpListen: "127.0.0.1:8080"
