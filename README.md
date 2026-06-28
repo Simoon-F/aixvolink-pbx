@@ -1,7 +1,7 @@
 # AixvoLinkPBX
 
 AixvoLinkPBX is an open-core, programmable SIP and WebRTC PBX written in Go.
-The repository is currently at **Phase 0: project initialization and technical validation**. It does not yet provide a PBX service.
+The repository has completed **Phase 1: Registrar and internal SIP calling**. It provides a bounded single-node UDP/TCP registrar and basic SIP B2BUA; RTP/media starts in Phase 2.
 
 ## Requirements
 
@@ -9,13 +9,17 @@ The repository is currently at **Phase 0: project initialization and technical v
 - GNU Make
 - Optional CI tools installed by `make tools`
 
-## Phase 0 quick start
+## Phase 1 verification
 
 ```sh
 make test
 make test-race
+make fuzz-smoke
+make sipp-test
 make build
 ```
+
+MySQL integration tests additionally require `AIXVOLINKPBX_TEST_MYSQL_DSN`; see `make integration-test`. Apply `migrations/000001_phase1.sql`, set `AIXVOLINKPBX_MYSQL_DSN` and a 32-byte-or-longer `AIXVOLINKPBX_NONCE_SECRET`, then run `go run ./cmd/aixvolinkpbx` for the service.
 
 The isolated protocol experiments are documented in:
 
@@ -23,11 +27,11 @@ The isolated protocol experiments are documented in:
 - [`spikes/diago`](spikes/diago/README.md)
 - [`spikes/pion`](spikes/pion/README.md)
 
-Architecture decisions are in [`docs/adr`](docs/adr), and the executed Phase 0 evidence is recorded in [`docs/phase-0-validation.md`](docs/phase-0-validation.md).
+Architecture decisions are in [`docs/adr`](docs/adr). Executed evidence is recorded in [`docs/phase-0-validation.md`](docs/phase-0-validation.md) and [`docs/phase-1-validation.md`](docs/phase-1-validation.md).
 
 ## Scope boundary
 
-Phase 0 contains dependency and interoperability experiments only. Registrar, B2BUA, production media engine, administration UI, carrier adapters, storage, and commercial services are deliberately absent.
+Phase 1 contains registration, internal SIP call control, CDRs, and correlated events. Production media, administration UI, carrier adapters, high availability, and commercial services remain deliberately absent.
 
 ## Security
 

@@ -93,7 +93,7 @@ The main command intentionally exposes version/build validation only. It is not 
 3. The Diago test is a single-endpoint echo, not sustained two-leg load, RTCP quality validation, packet-loss testing, or a production port allocator.
 4. MPL-2.0 obligations are documented and no Diago files were copied or modified, but a formal legal review is still required before production distribution.
 5. The business parameters listed in plan section 22 remain unconfirmed: peak calls/CPS, clients, codecs, carrier security modes, TURN topology, recording retention, first region/numbers, target hosts, frontend stack, and tenant isolation.
-6. Phase 1 CI additions for meaningful SIPp, fuzz, and MySQL integration scenarios do not exist yet because Phase 0 deliberately contains no registrar, persistence, or B2BUA behavior to test.
+6. The Phase 1 implementation has now closed the previously deferred SIPp, fuzz, and MySQL integration CI gates; see `docs/phase-1-validation.md`.
 
 ## Phase 1 admission checklist
 
@@ -108,7 +108,7 @@ The main command intentionally exposes version/build validation only. It is not 
 | No Phase 1 PBX/business implementation introduced | Pass |
 | Owner-approved Core license | Pass: Apache-2.0 |
 
-**Admission decision: ready.** Phase 1 may begin after the outstanding business parameters that affect its implementation are confirmed and recorded.
+**Original admission decision: ready.** The post-completion audit in `docs/phase-0-audit.md` corrected this to **conditional** because the default-branch trigger and repository-wide fuzz/MySQL/SIPp gates were incomplete. Phase 1 may proceed only to implement the real registrar/call scenarios that close those gaps; Phase 2 admission remains blocked until they pass.
 
 ## Recommended next-phase prompt
 

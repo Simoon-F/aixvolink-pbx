@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<scenario name="Digest registration for extension 1002">
+  <send retrans="500"><![CDATA[
+    REGISTER sip:127.0.0.1:[remote_port] SIP/2.0
+    Via: SIP/2.0/UDP 127.0.0.1:[local_port];branch=[branch]
+    From: <sip:1002@pbx.example.invalid>;tag=[call_number]
+    To: <sip:1002@pbx.example.invalid>
+    Call-ID: [call_id]
+    CSeq: 1 REGISTER
+    Contact: <sip:1002@127.0.0.1:[local_port]>;expires=300
+    Max-Forwards: 70
+    Content-Length: 0
+
+  ]]></send>
+  <recv response="401" auth="true"/>
+  <send retrans="500"><![CDATA[
+    REGISTER sip:127.0.0.1:[remote_port] SIP/2.0
+    Via: SIP/2.0/UDP 127.0.0.1:[local_port];branch=[branch]
+    From: <sip:1002@pbx.example.invalid>;tag=[call_number]
+    To: <sip:1002@pbx.example.invalid>
+    Call-ID: [call_id]
+    CSeq: 2 REGISTER
+    Contact: <sip:1002@127.0.0.1:[local_port]>;expires=300
+    Max-Forwards: 70
+    [authentication username=1002 password=password-1002]
+    Content-Length: 0
+
+  ]]></send>
+  <recv response="200"/>
+</scenario>

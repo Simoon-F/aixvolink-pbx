@@ -1,10 +1,19 @@
-# Phase 0 configuration contract. Production parsing begins in Phase 1.
+# Phase 1 configuration example. The current binary accepts equivalent flags and environment variables.
 node:
   id: "pbx-development-1"
 
 sip:
   udpListen: "127.0.0.1:5060"
   tcpListen: "127.0.0.1:5060"
+  realm: "pbx.example.invalid"
+  defaultRegistrationExpiry: "5m"
+  minRegistrationExpiry: "1m"
+  maxRegistrationExpiry: "1h"
+
+# Secrets are references, never literal credentials.
+secrets:
+  mysqlDSNEnv: "AIXVOLINKPBX_MYSQL_DSN"
+  nonceSecretEnv: "AIXVOLINKPBX_NONCE_SECRET"
 
 media:
   bindIP: "127.0.0.1"

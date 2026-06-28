@@ -12,6 +12,19 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: phase1-ci-only
+          MYSQL_DATABASE: aixvolinkpbx_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pphase1-ci-only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -33,6 +46,16 @@ jobs:
         run: make test
       - name: Race test
         run: make test-race
+      - name: MySQL and network integration tests
+        env:
+          AIXVOLINKPBX_TEST_MYSQL_DSN: root:phase1-ci-only@tcp(127.0.0.1:3306)/aixvolinkpbx_test?parseTime=true
+        run: make integration-test
+      - name: SIP parser fuzz smoke
+        run: make fuzz-smoke
+      - name: Install SIPp
+        run: sudo apt-get update && sudo apt-get install --yes sip-tester
+      - name: SIPp protocol tests
+        run: make sipp-test
       - name: Vulnerability scan
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.5.0

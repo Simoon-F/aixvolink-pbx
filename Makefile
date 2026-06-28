@@ -4,7 +4,7 @@ GOLANGCI_LINT ?= golangci-lint
 GOVULNCHECK ?= govulncheck
 GO_LICENSES ?= go-licenses
 
-.PHONY: all fmt fmt-check vet lint test test-race bench vulncheck license-check build build-linux-amd64 build-linux-arm64 tools clean
+.PHONY: all fmt fmt-check vet lint test test-race integration-test sipp-test fuzz-smoke bench vulncheck license-check build build-linux-amd64 build-linux-arm64 tools clean
 
 all: fmt-check vet lint test test-race vulncheck license-check build
 
@@ -26,8 +26,18 @@ test:
 test-race:
 	$(GO) test -race -count=1 ./...
 
+integration-test:
+	@test -n "$$AIXVOLINKPBX_TEST_MYSQL_DSN" || { echo "AIXVOLINKPBX_TEST_MYSQL_DSN is required" >&2; exit 1; }
+	$(GO) test -count=1 ./internal/platform/mysql/... ./test/integration/...
+
+sipp-test:
+	./scripts/run_sipp_tests.sh
+
+fuzz-smoke:
+	$(GO) test -run='^$$' -fuzz=FuzzSIPRegisterParser -fuzztime=5s ./internal/sip/registrar
+
 bench:
-	$(GO) test -run='^$$' -bench=. -benchmem ./spikes/diago/...
+	$(GO) test -run='^$$' -bench=. -benchmem ./internal/core/... ./spikes/diago/...
 
 vulncheck:
 	$(GOVULNCHECK) ./...

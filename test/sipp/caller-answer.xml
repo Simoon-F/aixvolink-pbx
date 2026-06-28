@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<scenario name="Caller establishes and clears call">
+  <send retrans="500"><![CDATA[
+    INVITE sip:1002@pbx.example.invalid SIP/2.0
+    Via: SIP/2.0/UDP 127.0.0.1:[local_port];branch=[branch]
+    From: <sip:1001@pbx.example.invalid>;tag=caller-[call_number]
+    To: <sip:1002@pbx.example.invalid>
+    Call-ID: [call_id]
+    CSeq: 1 INVITE
+    Contact: <sip:1001@127.0.0.1:[local_port]>
+    Max-Forwards: 70
+    Content-Length: 0
+
+  ]]></send>
+  <recv response="100" optional="true"/>
+  <recv response="180" optional="true"/>
+  <recv response="200" rrs="true"/>
+  <send><![CDATA[
+    ACK sip:1002@pbx.example.invalid SIP/2.0
+    Via: SIP/2.0/UDP 127.0.0.1:[local_port];branch=[branch]
+    [routes]
+    From: <sip:1001@pbx.example.invalid>;tag=caller-[call_number]
+    [last_To:]
+    [last_Call-ID:]
+    CSeq: 1 ACK
+    Max-Forwards: 70
+    Content-Length: 0
+
+  ]]></send>
+  <pause milliseconds="100"/>
+  <send retrans="500"><![CDATA[
+    BYE sip:1002@pbx.example.invalid SIP/2.0
+    Via: SIP/2.0/UDP 127.0.0.1:[local_port];branch=[branch]
+    [routes]
+    From: <sip:1001@pbx.example.invalid>;tag=caller-[call_number]
+    [last_To:]
+    [last_Call-ID:]
+    CSeq: 2 BYE
+    Max-Forwards: 70
+    Content-Length: 0
+
+  ]]></send>
+  <recv response="200" crlf="true"/>
+</scenario>

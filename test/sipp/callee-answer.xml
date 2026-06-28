@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<scenario name="Callee answers and receives BYE">
+  <recv request="INVITE" crlf="true"/>
+  <send><![CDATA[
+    SIP/2.0 180 Ringing
+    [last_Via:]
+    [last_From:]
+    [last_To:];tag=callee-[call_number]
+    [last_Call-ID:]
+    [last_CSeq:]
+    Contact: <sip:1002@127.0.0.1:[local_port]>
+    Content-Length: 0
+
+  ]]></send>
+  <send retrans="500"><![CDATA[
+    SIP/2.0 200 OK
+    [last_Via:]
+    [last_From:]
+    [last_To:];tag=callee-[call_number]
+    [last_Call-ID:]
+    [last_CSeq:]
+    Contact: <sip:1002@127.0.0.1:[local_port]>
+    Content-Length: 0
+
+  ]]></send>
+  <recv request="ACK"/>
+  <recv request="BYE"/>
+  <send><![CDATA[
+    SIP/2.0 200 OK
+    [last_Via:]
+    [last_From:]
+    [last_To:]
+    [last_Call-ID:]
+    [last_CSeq:]
+    Content-Length: 0
+
+  ]]></send>
+</scenario>

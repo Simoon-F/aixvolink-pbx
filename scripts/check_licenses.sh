@@ -8,6 +8,6 @@ command -v "$GO_LICENSES" >/dev/null 2>&1 || {
   exit 1
 }
 
-"$GO_LICENSES" check ./spikes/... \
+"$GO_LICENSES" check ./... \
   --ignore github.com/Simoon-F/aixvolink-pbx \
   --allowed_licenses=Apache-2.0,MIT,BSD-2-Clause,BSD-3-Clause,MPL-2.0
