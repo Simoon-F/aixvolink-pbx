@@ -58,14 +58,15 @@ run_pair() {
   caller_media_port=$((caller_port + 12000))
   callee_media_port=$((callee_port + 12000))
 
+  # SIPp 3.7 removed the legacy -mp alias; use the canonical option.
   register_user "$callee_port" 1002
   "$SIPP" "$TARGET" -sf "$ROOT/test/sipp/$callee_scenario" -i 127.0.0.1 -p "$callee_port" \
-    -mi 127.0.0.1 -mp "$callee_media_port" -rtp_echo -m 1 -nd -timeout 10s >/dev/null &
+    -mi 127.0.0.1 -min_rtp_port "$callee_media_port" -rtp_echo -m 1 -nd -timeout 10s >/dev/null &
   callee_pid=$!
   sleep 1
   register_user "$caller_port" 1001
   "$SIPP" "$TARGET" -sf "$ROOT/test/sipp/$caller_scenario" -i 127.0.0.1 -p "$caller_port" \
-    -mi 127.0.0.1 -mp "$caller_media_port" -m 1 -nd -timeout 10s >/dev/null
+    -mi 127.0.0.1 -min_rtp_port "$caller_media_port" -m 1 -nd -timeout 10s >/dev/null
   wait "$callee_pid"
 }
 
