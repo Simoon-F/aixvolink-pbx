@@ -6,3 +6,4 @@
 *.log
 *.prof
 *.test
+.history
